@@ -36,11 +36,166 @@ const FILTERS = [
   { key: "low", label: "Low" },
 ];
 const COLUMNS = ["todo", "in_progress", "completed"];
+const SAMPLE_TASKS = [
+  {
+    id: "1",
+    title: "Design new landing page",
+    description: "Create wireframes and high-fidelity mockups for the redesigned homepage with hero section and feature highlights.",
+    status: "in_progress",
+    priority: "high",
+    due_date: "2026-06-05",
+    created_date: "2026-05-20T10:00:00Z",
+  },
+  {
+    id: "2",
+    title: "Set up CI/CD pipeline",
+    description: "Configure GitHub Actions for automated testing, building, and deployment to production.",
+    status: "todo",
+    priority: "high",
+    due_date: "2026-06-10",
+    created_date: "2026-05-21T09:00:00Z",
+  },
+  {
+    id: "3",
+    title: "Write unit tests for auth module",
+    description: "Cover login, registration, password reset, and token refresh flows with Jest.",
+    status: "todo",
+    priority: "medium",
+    due_date: "2026-06-08",
+    created_date: "2026-05-22T08:30:00Z",
+  },
+  {
+    id: "4",
+    title: "Fix payment gateway bug",
+    description: "Stripe webhook is not firing on subscription renewals. Investigate and patch the handler.",
+    status: "in_progress",
+    priority: "high",
+    due_date: "2026-05-31",
+    created_date: "2026-05-23T11:00:00Z",
+  },
+  {
+    id: "5",
+    title: "Update API documentation",
+    description: "Sync Swagger/OpenAPI docs with the latest endpoint changes from the v2.3 release.",
+    status: "completed",
+    priority: "low",
+    due_date: "2026-05-28",
+    created_date: "2026-05-18T14:00:00Z",
+  },
+  {
+    id: "6",
+    title: "Migrate database to PostgreSQL",
+    description: "Move from SQLite to PostgreSQL for production scalability. Update ORM configs and run migrations.",
+    status: "todo",
+    priority: "high",
+    due_date: "2026-06-20",
+    created_date: "2026-05-24T10:00:00Z",
+  },
+  {
+    id: "7",
+    title: "Implement dark mode toggle",
+    description: "Add system-level dark/light mode detection with a manual toggle saved to localStorage.",
+    status: "completed",
+    priority: "medium",
+    due_date: "2026-05-25",
+    created_date: "2026-05-15T09:00:00Z",
+  },
+  {
+    id: "8",
+    title: "Optimize image loading",
+    description: "Implement lazy loading, WebP conversion, and CDN caching for all product images.",
+    status: "completed",
+    priority: "medium",
+    due_date: "2026-05-27",
+    created_date: "2026-05-16T13:00:00Z",
+  },
+  {
+    id: "9",
+    title: "Conduct user interviews",
+    description: "Schedule and run 5 user interviews to gather feedback on the new onboarding flow.",
+    status: "in_progress",
+    priority: "medium",
+    due_date: "2026-06-03",
+    created_date: "2026-05-25T10:00:00Z",
+  },
+  {
+    id: "10",
+    title: "Add multi-language support",
+    description: "Integrate i18n library and add translations for English, Spanish, French, and Arabic.",
+    status: "todo",
+    priority: "low",
+    due_date: "2026-07-01",
+    created_date: "2026-05-26T08:00:00Z",
+  },
+  {
+    id: "11",
+    title: "Security audit & penetration testing",
+    description: "Hire external security firm to perform full pentest on the API and admin dashboard.",
+    status: "todo",
+    priority: "high",
+    due_date: "2026-06-15",
+    created_date: "2026-05-27T09:00:00Z",
+  },
+  {
+    id: "12",
+    title: "Build admin analytics dashboard",
+    description: "Create charts for DAU, revenue, churn rate, and user growth using Recharts.",
+    status: "in_progress",
+    priority: "medium",
+    due_date: "2026-06-12",
+    created_date: "2026-05-28T10:00:00Z",
+  },
+  {
+    id: "13",
+    title: "Refactor legacy cart logic",
+    description: "Rewrite the shopping cart module using Zustand for cleaner state management.",
+    status: "todo",
+    priority: "medium",
+    due_date: "2026-06-18",
+    created_date: "2026-05-29T11:00:00Z",
+  },
+  {
+    id: "14",
+    title: "Email notification system",
+    description: "Set up Resend for transactional emails - order confirmations, password resets, and weekly digests.",
+    status: "completed",
+    priority: "high",
+    due_date: "2026-05-22",
+    created_date: "2026-05-10T08:00:00Z",
+  },
+  {
+    id: "15",
+    title: "Mobile responsiveness fixes",
+    description: "Fix layout breaking on screens below 375px - navbar overlap, card overflow, and form padding issues.",
+    status: "completed",
+    priority: "low",
+    due_date: "2026-05-26",
+    created_date: "2026-05-19T14:00:00Z",
+  },
+  {
+    id: "16",
+    title: "Q1 performance review report",
+    description: "Compile team performance metrics and prepare the executive summary slide deck.",
+    status: "todo",
+    priority: "high",
+    due_date: "2026-05-15",
+    created_date: "2026-05-01T09:00:00Z",
+  },
+  {
+    id: "17",
+    title: "Update privacy policy",
+    description: "Revise the privacy policy to comply with the new GDPR amendment requirements.",
+    status: "in_progress",
+    priority: "medium",
+    due_date: "2026-05-20",
+    created_date: "2026-05-05T10:00:00Z",
+  },
+];
 
 function loadTasks() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    if (!Array.isArray(saved)) return [];
+    if (!Array.isArray(saved) || saved.length === 0) return SAMPLE_TASKS;
 
     return saved.filter((task) => task && typeof task === "object").map((task) => ({
       id: String(task.id || genId()),
@@ -52,7 +207,7 @@ function loadTasks() {
       created_date: task.created_date || new Date().toISOString(),
     }));
   } catch {
-    return [];
+    return SAMPLE_TASKS;
   }
 }
 
