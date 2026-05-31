@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { DragDropContext } from "@hello-pangea/dnd";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
   AlertTriangle,
@@ -20,9 +21,9 @@ import { format, isPast, isToday } from "date-fns";
 import DeleteTaskDialog from "../components/DeleteTaskDialog";
 import KanbanColumn from "../components/KanbanColumn";
 import TaskFormDialog from "../components/TaskFormDialog";
+import { tasksApi } from "../api/tasksApi";
 import { useToast } from "../utils/toast";
 
-const STORAGE_KEY = "taskflow_tasks";
 const STAT_CONFIG = [
   { key: "total", label: "Total Tasks", icon: Zap, gradient: ["#7c3aed", "#4f46e5"], delay: 0.35 },
   { key: "todo", label: "To Do", icon: ListTodo, gradient: ["#3b82f6", "#6366f1"], delay: 0.45 },
@@ -36,188 +37,6 @@ const FILTERS = [
   { key: "low", label: "Low" },
 ];
 const COLUMNS = ["todo", "in_progress", "completed"];
-const SAMPLE_TASKS = [
-  {
-    id: "1",
-    title: "Design new landing page",
-    description: "Create wireframes and high-fidelity mockups for the redesigned homepage with hero section and feature highlights.",
-    status: "in_progress",
-    priority: "high",
-    due_date: "2026-06-05",
-    created_date: "2026-05-20T10:00:00Z",
-  },
-  {
-    id: "2",
-    title: "Set up CI/CD pipeline",
-    description: "Configure GitHub Actions for automated testing, building, and deployment to production.",
-    status: "todo",
-    priority: "high",
-    due_date: "2026-06-10",
-    created_date: "2026-05-21T09:00:00Z",
-  },
-  {
-    id: "3",
-    title: "Write unit tests for auth module",
-    description: "Cover login, registration, password reset, and token refresh flows with Jest.",
-    status: "todo",
-    priority: "medium",
-    due_date: "2026-06-08",
-    created_date: "2026-05-22T08:30:00Z",
-  },
-  {
-    id: "4",
-    title: "Fix payment gateway bug",
-    description: "Stripe webhook is not firing on subscription renewals. Investigate and patch the handler.",
-    status: "in_progress",
-    priority: "high",
-    due_date: "2026-05-31",
-    created_date: "2026-05-23T11:00:00Z",
-  },
-  {
-    id: "5",
-    title: "Update API documentation",
-    description: "Sync Swagger/OpenAPI docs with the latest endpoint changes from the v2.3 release.",
-    status: "completed",
-    priority: "low",
-    due_date: "2026-05-28",
-    created_date: "2026-05-18T14:00:00Z",
-  },
-  {
-    id: "6",
-    title: "Migrate database to PostgreSQL",
-    description: "Move from SQLite to PostgreSQL for production scalability. Update ORM configs and run migrations.",
-    status: "todo",
-    priority: "high",
-    due_date: "2026-06-20",
-    created_date: "2026-05-24T10:00:00Z",
-  },
-  {
-    id: "7",
-    title: "Implement dark mode toggle",
-    description: "Add system-level dark/light mode detection with a manual toggle saved to localStorage.",
-    status: "completed",
-    priority: "medium",
-    due_date: "2026-05-25",
-    created_date: "2026-05-15T09:00:00Z",
-  },
-  {
-    id: "8",
-    title: "Optimize image loading",
-    description: "Implement lazy loading, WebP conversion, and CDN caching for all product images.",
-    status: "completed",
-    priority: "medium",
-    due_date: "2026-05-27",
-    created_date: "2026-05-16T13:00:00Z",
-  },
-  {
-    id: "9",
-    title: "Conduct user interviews",
-    description: "Schedule and run 5 user interviews to gather feedback on the new onboarding flow.",
-    status: "in_progress",
-    priority: "medium",
-    due_date: "2026-06-03",
-    created_date: "2026-05-25T10:00:00Z",
-  },
-  {
-    id: "10",
-    title: "Add multi-language support",
-    description: "Integrate i18n library and add translations for English, Spanish, French, and Arabic.",
-    status: "todo",
-    priority: "low",
-    due_date: "2026-07-01",
-    created_date: "2026-05-26T08:00:00Z",
-  },
-  {
-    id: "11",
-    title: "Security audit & penetration testing",
-    description: "Hire external security firm to perform full pentest on the API and admin dashboard.",
-    status: "todo",
-    priority: "high",
-    due_date: "2026-06-15",
-    created_date: "2026-05-27T09:00:00Z",
-  },
-  {
-    id: "12",
-    title: "Build admin analytics dashboard",
-    description: "Create charts for DAU, revenue, churn rate, and user growth using Recharts.",
-    status: "in_progress",
-    priority: "medium",
-    due_date: "2026-06-12",
-    created_date: "2026-05-28T10:00:00Z",
-  },
-  {
-    id: "13",
-    title: "Refactor legacy cart logic",
-    description: "Rewrite the shopping cart module using Zustand for cleaner state management.",
-    status: "todo",
-    priority: "medium",
-    due_date: "2026-06-18",
-    created_date: "2026-05-29T11:00:00Z",
-  },
-  {
-    id: "14",
-    title: "Email notification system",
-    description: "Set up Resend for transactional emails - order confirmations, password resets, and weekly digests.",
-    status: "completed",
-    priority: "high",
-    due_date: "2026-05-22",
-    created_date: "2026-05-10T08:00:00Z",
-  },
-  {
-    id: "15",
-    title: "Mobile responsiveness fixes",
-    description: "Fix layout breaking on screens below 375px - navbar overlap, card overflow, and form padding issues.",
-    status: "completed",
-    priority: "low",
-    due_date: "2026-05-26",
-    created_date: "2026-05-19T14:00:00Z",
-  },
-  {
-    id: "16",
-    title: "Q1 performance review report",
-    description: "Compile team performance metrics and prepare the executive summary slide deck.",
-    status: "todo",
-    priority: "high",
-    due_date: "2026-05-15",
-    created_date: "2026-05-01T09:00:00Z",
-  },
-  {
-    id: "17",
-    title: "Update privacy policy",
-    description: "Revise the privacy policy to comply with the new GDPR amendment requirements.",
-    status: "in_progress",
-    priority: "medium",
-    due_date: "2026-05-20",
-    created_date: "2026-05-05T10:00:00Z",
-  },
-];
-
-function loadTasks() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    if (!Array.isArray(saved) || saved.length === 0) return SAMPLE_TASKS;
-
-    return saved.filter((task) => task && typeof task === "object").map((task) => ({
-      id: String(task.id || genId()),
-      title: typeof task.title === "string" ? task.title : "Untitled task",
-      description: typeof task.description === "string" ? task.description : "",
-      status: COLUMNS.includes(task.status) ? task.status : "todo",
-      due_date: typeof task.due_date === "string" && !Number.isNaN(new Date(task.due_date).getTime()) ? task.due_date : "",
-      priority: ["low", "medium", "high"].includes(task.priority) ? task.priority : "medium",
-      created_date: task.created_date || new Date().toISOString(),
-    }));
-  } catch {
-    return SAMPLE_TASKS;
-  }
-}
-
-function saveTasks(tasks) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-}
-
-function genId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2);
-}
 
 function useCountUp(target, duration = 800) {
   const [val, setVal] = useState(0);
@@ -277,14 +96,48 @@ function StatCard({ label, value, icon: Icon, gradient, delay }) {
 
 export default function Dashboard() {
   const { toast } = useToast();
-  const [tasks, setTasks] = useState(loadTasks);
+  const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
   const [editTask, setEditTask] = useState(null);
   const [deleteTask, setDeleteTask] = useState(null);
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
 
-  useEffect(() => saveTasks(tasks), [tasks]);
+  const { data: tasks = [], isLoading } = useQuery({
+    queryKey: ["tasks"],
+    queryFn: tasksApi.getAll,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: tasksApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      setFormOpen(false);
+      toast({ title: "Task created" });
+    },
+    onError: (error) => toast({ title: error.message }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => tasksApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      setFormOpen(false);
+      setEditTask(null);
+      toast({ title: "Task updated" });
+    },
+    onError: (error) => toast({ title: error.message }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: tasksApi.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      setDeleteTask(null);
+      toast({ title: "Task deleted" });
+    },
+    onError: (error) => toast({ title: error.message }),
+  });
 
   const counts = useMemo(() => {
     const overdue = tasks.filter(
@@ -318,23 +171,22 @@ export default function Dashboard() {
   const circumference = 2 * Math.PI * 22;
   const today = format(new Date(), "EEEE, MMMM d");
 
-  const createTask = (data) => {
-    setTasks((prev) => [{ ...data, id: genId(), created_date: new Date().toISOString() }, ...prev]);
-    setFormOpen(false);
-    toast({ title: "Task created" });
+  const handleFormSubmit = (data) => {
+    if (editTask) {
+      updateMutation.mutate({ id: editTask.id, data });
+    } else {
+      createMutation.mutate(data);
+    }
   };
 
-  const updateTask = (id, data) => {
-    setTasks((prev) => prev.map((task) => (task.id === id ? { ...task, ...data } : task)));
-    setFormOpen(false);
-    setEditTask(null);
-  };
-
-  const handleDragEnd = ({ source, destination, draggableId }) => {
+  const handleDragEnd = ({ source, destination }) => {
     if (!destination) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
-    setTasks((prev) => prev.map((task) => (task.id === draggableId ? { ...task, status: destination.droppableId } : task)));
+    const id = filteredByCol[source.droppableId]?.[source.index]?.id;
+    if (id && source.droppableId !== destination.droppableId) {
+      updateMutation.mutate({ id, data: { status: destination.droppableId } });
+    }
   };
 
   return (
@@ -524,30 +376,36 @@ export default function Dashboard() {
           </div>
 
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>
-            <DragDropContext onDragEnd={handleDragEnd}>
-              <div className="flex gap-5 overflow-x-auto pb-3">
-                {COLUMNS.map((status, i) => (
-                  <motion.div
-                    key={status}
-                    className="min-w-[280px] flex-1"
-                    style={{ maxWidth: 420 }}
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 * i + 0.8, duration: 0.5 }}
-                  >
-                    <KanbanColumn
-                      status={status}
-                      tasks={filteredByCol[status]}
-                      onEdit={(task) => {
-                        setEditTask(task);
-                        setFormOpen(true);
-                      }}
-                      onDelete={(task) => setDeleteTask(task)}
-                    />
-                  </motion.div>
-                ))}
+            {isLoading ? (
+              <div className="rounded-2xl p-8 text-center text-sm font-bold text-white/40" style={{ border: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.025)" }}>
+                Loading tasks...
               </div>
-            </DragDropContext>
+            ) : (
+              <DragDropContext onDragEnd={handleDragEnd}>
+                <div className="flex gap-5 overflow-x-auto pb-3">
+                  {COLUMNS.map((status, i) => (
+                    <motion.div
+                      key={status}
+                      className="min-w-[280px] flex-1"
+                      style={{ maxWidth: 420 }}
+                      initial={{ opacity: 0, y: 30 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 * i + 0.8, duration: 0.5 }}
+                    >
+                      <KanbanColumn
+                        status={status}
+                        tasks={filteredByCol[status]}
+                        onEdit={(task) => {
+                          setEditTask(task);
+                          setFormOpen(true);
+                        }}
+                        onDelete={(task) => setDeleteTask(task)}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
+              </DragDropContext>
+            )}
           </motion.div>
         </main>
       </div>
@@ -559,8 +417,8 @@ export default function Dashboard() {
           if (!value) setEditTask(null);
         }}
         task={editTask}
-        onSubmit={(data) => (editTask ? updateTask(editTask.id, data) : createTask(data))}
-        isLoading={false}
+        onSubmit={handleFormSubmit}
+        isLoading={createMutation.isPending || updateMutation.isPending}
       />
       <DeleteTaskDialog
         open={Boolean(deleteTask)}
@@ -568,11 +426,8 @@ export default function Dashboard() {
           if (!value) setDeleteTask(null);
         }}
         task={deleteTask}
-        onConfirm={() => {
-          setTasks((prev) => prev.filter((task) => task.id !== deleteTask.id));
-          setDeleteTask(null);
-        }}
-        isLoading={false}
+        onConfirm={() => deleteTask && deleteMutation.mutate(deleteTask.id)}
+        isLoading={deleteMutation.isPending}
       />
     </div>
   );
